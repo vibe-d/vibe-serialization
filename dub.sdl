@@ -1,4 +1,8 @@
 name "vibe-serialization"
 description "Serialization system and BSON/JSON format support"
+authors "Sönke Ludwig"
+copyright "Copyright © 2016-2024, Sönke Ludwig"
+license "MIT"
+
 dependency "vibe-container" version=">=1.2.2 <2.0.0-0"
 targetType "library"
