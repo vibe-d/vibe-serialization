@@ -1,0 +1,4 @@
+name "vibe-serialization"
+description "Serialization system and BSON/JSON format support"
+dependency "vibe-container" version=">=1.2.2 <2.0.0-0"
+targetType "library"
