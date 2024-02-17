@@ -1,3 +1,10 @@
+/+ dub.sdl:
+	name "tests"
+	description "Command-line argument test"
+	dependency "vibe-serialization" path=".."
++/
+module test;
+
 import vibe.data.json;
 
 
