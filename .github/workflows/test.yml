@@ -40,4 +40,4 @@ jobs:
                 DC: ${{matrix.dc}}
                 ARCH: ${{matrix.arch}}
               shell: bash
-              run: dub test
+              run: ./run-ci.sh
