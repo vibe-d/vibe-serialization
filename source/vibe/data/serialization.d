@@ -717,7 +717,7 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 		} else static if (is(T == enum)) {
 			static if (hasPolicyAttributeL!(ByNameAttribute, Policy, ATTRIBUTES)) {
 				return ser.deserializeValue!(string, ATTRIBUTES).to!T();
-			} else {
+			} else static if (isSomeString!(OriginalType!T)) {
 				auto value = ser.deserializeValue!(OriginalType!T);
 				switch (value) {
 					default:
@@ -725,6 +725,8 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 					static foreach (enumvalue; NoDuplicates!(EnumMembers!T))
 						case enumvalue: return enumvalue;
 				}
+			} else {
+				return cast(T)ser.deserializeValue!(OriginalType!T);
 			}
 		} else static if (Serializer.isSupportedValueType!T) {
 			return ser.readValue!(Traits, T)();
@@ -2260,4 +2262,15 @@ unittest {
 
 	assertNotThrown(deserializeString("foobar"));
 	assertThrown!ConvException(deserializeString("baz"));
+}
+
+unittest { // bit flag enums
+	enum Foo {
+		a = 1 << 0,
+		b = 1 << 1
+	}
+
+	const expected = "V(i)(3)";
+	assert(serialize!TestSerializer(Foo.a | Foo.b) == expected, serialize!TestSerializer(Foo.a | Foo.b));
+	assert(deserialize!(TestSerializer, Foo)(expected) == (Foo.a | Foo.b));
 }
