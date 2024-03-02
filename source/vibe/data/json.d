@@ -2225,7 +2225,7 @@ struct JsonStringSerializer(R, bool pretty = false)
 		bool tryReadNull(Traits)()
 		{
 			m_range.skipWhitespace(&m_line);
-			if (m_range.front != 'n') return false;
+			if (m_range.empty || m_range.front != 'n') return false;
 			foreach (ch; "null") {
 				enforceJson(m_range.front == ch, "Expecting 'null'.");
 				m_range.popFront();
@@ -2955,4 +2955,13 @@ unittest { // issue #1647 - JSON deserializeJson throws exception on unknown inp
 	}
 	S expected = S("bar");
 	assert(deserializeJson!S(`{"foo":"bar","baz":"bam"}`) == expected);
+}
+
+unittest { // issue #3
+	static class Config {
+		@optional string a;
+	}
+
+	assertThrown!JSONException(deserializeJson!Config("").a);
+	assert(deserializeJson!Config("{}").a is null);
 }
