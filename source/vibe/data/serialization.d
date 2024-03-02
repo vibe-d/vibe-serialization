@@ -224,9 +224,10 @@ version (unittest)
 ///
 unittest {
 	import vibe.data.json;
+	import std.meta : AliasSeq;
 
 	template SizePol(T)
-		if (__traits(allMembers, T) == TypeTuple!("x", "y"))
+		if (__traits(allMembers, T) == AliasSeq!("x", "y"))
 	{
 		import std.conv;
 		import std.array;
@@ -312,9 +313,10 @@ T deserializeWithPolicy(Serializer, alias Policy, T, ARGS...)(ARGS args)
 ///
 unittest {
 	import vibe.data.json;
+	import std.meta : AliasSeq;
 
 	template SizePol(T)
-		if (__traits(allMembers, T) == TypeTuple!("x", "y"))
+		if (__traits(allMembers, T) == AliasSeq!("x", "y"))
 	{
 		import std.conv;
 		import std.array;
