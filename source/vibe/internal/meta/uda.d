@@ -61,9 +61,9 @@ private struct UdaSearchResult(alias UDA)
 template findNextUDA(alias UDA, alias Symbol, long idx, bool allow_types = false) if (!is(UDA))
 {
 	import std.traits : isInstanceOf;
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
-	private alias udaTuple = TypeTuple!(__traits(getAttributes, Symbol));
+	private alias udaTuple = AliasSeq!(__traits(getAttributes, Symbol));
 
 	static assert(idx >= 0, "Index given to findNextUDA can't be negative");
 	static assert(idx <= udaTuple.length, "Index given to findNextUDA is above the number of attribute");
@@ -95,9 +95,9 @@ template findNextUDA(alias UDA, alias Symbol, long idx, bool allow_types = false
 template findNextUDA(UDA, alias Symbol, long idx, bool allow_types = false)
 {
 	import std.traits : isInstanceOf;
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
-	private alias udaTuple = TypeTuple!(__traits(getAttributes, Symbol));
+	private alias udaTuple = AliasSeq!(__traits(getAttributes, Symbol));
 
 	static assert(idx >= 0, "Index given to findNextUDA can't be negative");
 	static assert(idx <= udaTuple.length, "Index given to findNextUDA is above the number of attribute");
@@ -189,7 +189,7 @@ unittest
 /// Eager version of findNextUDA that represent all instances of UDA in a Tuple.
 /// If one of the attribute is a type instead of an instance, compilation will fail.
 template UDATuple(alias UDA, alias Sym) {
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
 	private template extract(size_t maxSize, Founds...)
 	{
@@ -199,7 +199,7 @@ template UDATuple(alias UDA, alias Sym) {
 			enum extract = Founds[0 .. $ - 1];
 		else {
 			// For ease of use, this is a Tuple of UDA, not a tuple of UdaSearchResult!(...)
-			private alias Result = TypeTuple!(Founds[0 .. $ - 1], LastFound.value);
+			private alias Result = AliasSeq!(Founds[0 .. $ - 1], LastFound.value);
 			// We're at the last parameter
 			static if (LastFound.index == maxSize)
 				enum extract = Result;
@@ -208,13 +208,13 @@ template UDATuple(alias UDA, alias Sym) {
 		}
 	}
 
-	private enum maxIndex = TypeTuple!(__traits(getAttributes, Sym)).length;
+	private enum maxIndex = AliasSeq!(__traits(getAttributes, Sym)).length;
 	enum UDATuple = extract!(maxIndex, findNextUDA!(UDA, Sym, 0));
 }
 
 unittest
 {
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
 	struct Attribute { int x; }
 	enum Dummy;
@@ -222,7 +222,7 @@ unittest
 	@(Dummy, Attribute(21), Dummy, Attribute(42), Attribute(84)) void symbol() {}
 	@(Dummy, Attribute(21), Dummy, Attribute(42), Attribute) void wrong() {}
 
-	alias Cmp = TypeTuple!(Attribute(21), Attribute(42), Attribute(84));
+	alias Cmp = AliasSeq!(Attribute(21), Attribute(42), Attribute(84));
 	static assert(Cmp == UDATuple!(Attribute, symbol));
 	static assert(!is(UDATuple!(Attribute, wrong)));
 }

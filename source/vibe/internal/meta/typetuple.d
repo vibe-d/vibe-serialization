@@ -1,5 +1,5 @@
 /**
-	Additions to std.typetuple pending for inclusion into Phobos.
+	Additions to std.meta pending for inclusion into Phobos.
 
 	Copyright: © 2013 Sönke Ludwig
 	License: Subject to the terms of the MIT license, as written in the included LICENSE.txt file.
@@ -8,11 +8,11 @@
 
 module vibe.internal.meta.typetuple;
 
-import std.typetuple;
+import std.meta;
 import std.traits;
 
 /**
-	TypeTuple which does not auto-expand.
+	AliasSeq which does not auto-expand.
 
 	Useful when you need
 	to multiple several type tuples as different template argument
@@ -54,7 +54,7 @@ version (unittest) // NOTE: GDC complains about template definitions in unittest
 	}
 	alias fake = Fake!(int, double, string);
 
-	alias fake2 = TypeTuple!(int, double, string);
+	alias fake2 = AliasSeq!(int, double, string);
 
 	static assert (isGroup!group);
 	static assert (isGroup!group2);

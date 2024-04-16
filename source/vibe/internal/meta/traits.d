@@ -146,7 +146,7 @@ template isRWPlainField(T, string M)
 template isRWField(T, string M)
 {
 	import std.traits;
-	import std.typetuple;
+	import std.meta;
 
 	static void testAssign()() {
 		static if (!isCopyable!T) T t; // for structs with disabled copy constructor
@@ -155,7 +155,7 @@ template isRWField(T, string M)
 	}
 
 	// reject type aliases
-	static if (is(TypeTuple!(__traits(getMember, T, M)))) enum isRWField = false;
+	static if (is(AliasSeq!(__traits(getMember, T, M)))) enum isRWField = false;
 	// reject non-public members
 	else static if (!isPublicMember!(T, M)) enum isRWField = false;
 	// reject static members
@@ -237,11 +237,11 @@ package T Tgen(T)(){ return T.init; }
 */
 template isPublicMember(T, string M)
 {
-	import std.algorithm, std.typetuple : TypeTuple;
+	import std.algorithm, std.meta : AliasSeq;
 
-	static if (!__traits(compiles, TypeTuple!(__traits(getMember, T, M)))) enum isPublicMember = false;
+	static if (!__traits(compiles, AliasSeq!(__traits(getMember, T, M)))) enum isPublicMember = false;
 	else {
-		alias MEM = TypeTuple!(__traits(getMember, T, M));
+		alias MEM = AliasSeq!(__traits(getMember, T, M));
 		static if (__traits(compiles, __traits(getProtection, MEM)))
 			enum isPublicMember = __traits(getProtection, MEM).among("public", "export");
 		else
@@ -293,10 +293,10 @@ unittest {
 */
 template isNonStaticMember(T, string M)
 {
-	import std.typetuple;
+	import std.meta;
 	import std.traits;
 
-	alias MF = TypeTuple!(__traits(getMember, T, M));
+	alias MF = AliasSeq!(__traits(getMember, T, M));
 	static if (M.length == 0) {
 		enum isNonStaticMember = false;
 	} else static if (anySatisfy!(isSomeFunction, MF)) {

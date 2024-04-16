@@ -51,13 +51,13 @@ version(unittest)
 */
 template getSymbols(T)
 {
-	import std.typetuple : TypeTuple, NoDuplicates, staticMap;
+	import std.meta : AliasSeq, NoDuplicates, staticMap;
 	import std.traits;
 
 	private template Implementation(T)
 	{
 		static if (is(T == U!V, alias U, V)) { // single-argument template support
-			alias Implementation = TypeTuple!(U, Implementation!V);
+			alias Implementation = AliasSeq!(U, Implementation!V);
 		}
 		else static if (isAggregateType!T || is(T == enum)) {
 			alias Implementation = Unqual!T;
@@ -66,7 +66,7 @@ template getSymbols(T)
 			alias Implementation = Implementation!(Unqual!(typeof(T.init[0])));
 		}
 		else static if (isAssociativeArray!T) {
-			alias Implementation = TypeTuple!(
+			alias Implementation = AliasSeq!(
 				Implementation!(Unqual!(ValueType!T)),
 				Implementation!(Unqual!(KeyType!T))
 			);
@@ -75,7 +75,7 @@ template getSymbols(T)
 			alias Implementation = Implementation!(Unqual!(PointerTarget!T));
 		}
 		else
-			alias Implementation = TypeTuple!();
+			alias Implementation = AliasSeq!();
 	}
 
 	alias getSymbols = NoDuplicates!(Implementation!T);
@@ -84,7 +84,7 @@ template getSymbols(T)
 ///
 unittest
 {
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
 	struct A {}
 	interface B {}
@@ -92,9 +92,9 @@ unittest
 	struct C(T) {}
 
 	// can't directly compare tuples thus comparing their string representation
-	static assert (getSymbols!Type.stringof == TypeTuple!(A, B).stringof);
-	static assert (getSymbols!int.stringof == TypeTuple!().stringof);
-	static assert (getSymbols!(C!A).stringof == TypeTuple!(C, A).stringof);
+	static assert (getSymbols!Type.stringof == AliasSeq!(A, B).stringof);
+	static assert (getSymbols!int.stringof == AliasSeq!().stringof);
+	static assert (getSymbols!(C!A).stringof == AliasSeq!(C, A).stringof);
 }
 
 /**
@@ -284,7 +284,7 @@ mixin template CloneFunction(alias Func, string body_, bool keepUDA = false, str
 	// Template mixin: everything has to be self-contained.
 	import std.format : format;
 	import std.traits : ReturnType, variadicFunctionStyle, Variadic;
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 	import vibe.internal.meta.codegen : ParameterTuple, FuncAttributes;
 	// Sadly this is not possible:
 	// class Test {
@@ -294,9 +294,9 @@ mixin template CloneFunction(alias Func, string body_, bool keepUDA = false, str
 	//   }
 	// }
 	static if (keepUDA)
-		private alias UDA = TypeTuple!(__traits(getAttributes, Func));
+		private alias UDA = AliasSeq!(__traits(getAttributes, Func));
 	else
-		private alias UDA = TypeTuple!();
+		private alias UDA = AliasSeq!();
 	static if (variadicFunctionStyle!Func == Variadic.no) {
 		mixin(q{
 				@(UDA) ReturnType!Func %s(ParameterTuple!Func) %s {
@@ -317,7 +317,7 @@ mixin template CloneFunction(alias Func, string body_, bool keepUDA = false, str
 ///
 unittest
 {
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
 	interface ITest
 	{
@@ -342,7 +342,7 @@ unittest
 	// UDA tests
 	static assert(__traits(getAttributes, Test.customname).length == 0);
 	static assert(__traits(getAttributes, Test.foo2).length == 0);
-	static assert(__traits(getAttributes, Test.foo) == TypeTuple!("42"));
+	static assert(__traits(getAttributes, Test.foo) == AliasSeq!("42"));
 
 	assert(new Test().foo("", 21) == 42);
 	assert(new Test().foo2 == 42);
@@ -370,11 +370,11 @@ mixin template CloneFunctionDecl(alias Func, bool keepUDA = true, string identif
 	// Template mixin: everything has to be self-contained.
 	import std.format : format;
 	import std.traits : ReturnType, variadicFunctionStyle, Variadic;
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 	import vibe.internal.meta.codegen : ParameterTuple, FuncAttributes;
 
 	static if (keepUDA)
-		private enum UDA = q{@(TypeTuple!(__traits(getAttributes, Func)))};
+		private enum UDA = q{@(AliasSeq!(__traits(getAttributes, Func)))};
 	else
 		private enum UDA = "";
 
@@ -394,7 +394,7 @@ mixin template CloneFunctionDecl(alias Func, bool keepUDA = true, string identif
 
 ///
 unittest {
-	import std.typetuple : TypeTuple;
+	import std.meta : AliasSeq;
 
 	enum Foo;
 	interface IUDATest {
@@ -404,6 +404,6 @@ unittest {
 		mixin CloneFunctionDecl!(IUDATest.bar);
 	}
 	// Tuples don't like when you compare types using '=='.
-	static assert(is(TypeTuple!(__traits(getAttributes, UDATest.bar))[0] == Foo));
-	static assert(__traits(getAttributes, UDATest.bar)[1 .. $] == TypeTuple!("forty-two", 42));
+	static assert(is(AliasSeq!(__traits(getAttributes, UDATest.bar))[0] == Foo));
+	static assert(__traits(getAttributes, UDATest.bar)[1 .. $] == AliasSeq!("forty-two", 42));
 }
