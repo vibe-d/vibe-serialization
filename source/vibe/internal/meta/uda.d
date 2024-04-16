@@ -227,6 +227,18 @@ unittest
 	static assert(!is(UDATuple!(Attribute, wrong)));
 }
 
+template matchesUDAKind(alias UDA, alias UDAKind, bool allow_types = false)
+{
+	static if (is(UDA)) {
+		static if (is(UDA == UDAKind)) {
+			static assert (allow_types, "findNextUDA is designed to look up values, not types");
+			enum matchesUDAKind = true;
+		} else enum matchesUDAKind = false;
+	} else {
+		enum matchesUDAKind = is(typeof(UDA) == UDAKind);
+	}
+}
+
 /// Avoid repeating the same error message again and again.
 /// ----
 /// if (!__ctfe)
