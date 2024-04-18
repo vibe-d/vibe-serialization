@@ -154,7 +154,7 @@ template IsAttributedParameter(alias Function, string name)
 
 template HasFuncAttributes(alias Func)
 {
-	import std.typetuple;
+	import std.meta;
 	enum HasFuncAttributes = (anySatisfy!(isOutputAttribute, __traits(getAttributes, Func))
 							  || anySatisfy!(isInputAttribute, __traits(getAttributes, Func)));
 }
@@ -250,12 +250,12 @@ ReturnType!FUNCTION evaluateOutputModifiers(alias FUNCTION, ARGS...)(ReturnType!
 {
 	import std.string : format;
 	import std.traits : ParameterTypeTuple, ReturnType, fullyQualifiedName;
-	import std.typetuple : Filter;
+	import std.meta : Filter;
 	import vibe.internal.meta.typetuple : Compare, Group;
 
 	alias output_attributes = Filter!(isOutputAttribute, RecursiveFunctionAttributes!FUNCTION);
 	foreach (OA; output_attributes) {
-		import std.typetuple : TypeTuple;
+		import std.meta : AliasSeq;
 
 		static assert (
 			Compare!(
@@ -267,7 +267,7 @@ ReturnType!FUNCTION evaluateOutputModifiers(alias FUNCTION, ARGS...)(ReturnType!
 				"does not match provided argument list %s",
 				fullyQualifiedName!(OA.modificator),
 				ParameterTypeTuple!(OA.modificator).stringof,
-				TypeTuple!(ReturnType!FUNCTION, ARGS).stringof
+				AliasSeq!(ReturnType!FUNCTION, ARGS).stringof
 			)
 		);
 
@@ -365,13 +365,13 @@ private {
 			Function = attributed functon / method symbol
 
 		Returns:
-			TypeTuple of Parameter instances, one for every Function
+			AliasSeq of Parameter instances, one for every Function
 			parameter that will be evaluated from attributes.
 	*/
 	template AttributedParameterMetadata(alias Function)
 	{
 		import std.array : join;
-		import std.typetuple : Filter, staticMap, staticIndexOf;
+		import std.meta : Filter, staticMap, staticIndexOf;
 		import std.traits : ParameterIdentifierTuple, ReturnType,
 			fullyQualifiedName, moduleName;
 
@@ -591,7 +591,7 @@ struct AttributedFunction(alias Function, alias StoredArgTypes)
 		ParameterTypeTuple, ParameterIdentifierTuple;
 	import vibe.internal.meta.typetuple : Group, isGroup, Compare;
 	import std.functional : toDelegate;
-	import std.typetuple : Filter;
+	import std.meta : Filter;
 
 	static assert (isGroup!StoredArgTypes);
 	static assert (is(FunctionTypeOf!Function));
@@ -663,7 +663,7 @@ struct AttributedFunction(alias Function, alias StoredArgTypes)
 		);
 
 		static if (output_attributes.length) {
-			import std.typetuple : TypeTuple;
+			import std.meta : AliasSeq;
 
 			static assert (
 				Compare!(
@@ -675,7 +675,7 @@ struct AttributedFunction(alias Function, alias StoredArgTypes)
 					"does not match provided argument list %s",
 					fullyQualifiedName!(output_attributes[0].modificator),
 					ParameterTypeTuple!(output_attributes[0].modificator).stringof,
-					TypeTuple!(ReturnType!Function, StoredArgTypes.expand).stringof
+					AliasSeq!(ReturnType!Function, StoredArgTypes.expand).stringof
 				)
 			);
 

@@ -139,7 +139,7 @@ import std.conv : ConvException, to;
 import std.exception : enforce;
 import std.range.primitives : ElementType, isInputRange;
 import std.traits;
-import std.typetuple;
+import std.meta;
 
 
 /**
@@ -520,9 +520,9 @@ private template serializeValueImpl(Serializer, alias Policy) {
 				ser.beginWriteArray!Traits(nfields);
 				size_t fcount = 0;
 				foreach (mname; SerializableFields!(TU, Policy)) {
-					alias TMS = TypeTuple!(typeof(__traits(getMember, value, mname)));
+					alias TMS = AliasSeq!(typeof(__traits(getMember, value, mname)));
 					foreach (j, TM; TMS) {
-						alias TA = TypeTuple!(__traits(getAttributes, TypeTuple!(__traits(getMember, T, mname))[j]));
+						alias TA = AliasSeq!(__traits(getAttributes, AliasSeq!(__traits(getMember, T, mname))[j]));
 						alias STraits = SubTraits!(Traits, TM, TA);
 						ser.beginWriteArrayEntry!STraits(fcount);
 						static if (!isBuiltinTuple!(T, mname))
@@ -542,7 +542,7 @@ private template serializeValueImpl(Serializer, alias Policy) {
 						static if (!isBuiltinTuple!(T, mname)) {
 							auto vt = safeGetMember!mname(value);
 							static if (is(typeof(vt) : Nullable!NVT, NVT)
-									&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, TypeTuple!(__traits(getMember, T, mname))[0])) {
+									&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0])) {
 								if (vt.isNull) nfields--;
 							}
 						}
@@ -553,20 +553,26 @@ private template serializeValueImpl(Serializer, alias Policy) {
 					ser.beginWriteDictionary!Traits();
 				}
 				foreach (mname; SerializableFields!(TU, Policy)) {
-					alias TM = TypeTuple!(typeof(__traits(getMember, TU, mname)));
-					alias TA = TypeTuple!(__traits(getAttributes, TypeTuple!(__traits(getMember, T, mname))[0]));
-					enum name = getPolicyAttribute!(TU, mname, NameAttribute, Policy)(NameAttribute!DefaultPolicy(underscoreStrip(mname))).name;
+					alias TM = AliasSeq!(typeof(__traits(getMember, TU, mname)));
+					static if (__traits(getOverloads, T, mname).length > 0) {
+						// combine attributes of overload sets
+						alias getAtts(alias ovl) = __traits(getAttributes, ovl);
+						alias TA = staticMap!(getAtts, __traits(getOverloads, T, mname));
+					} else {
+						alias TA = AliasSeq!(__traits(getAttributes, AliasSeq!(__traits(getMember, T, mname))[0]));
+					}
+					enum name = getPolicyAttribute!(fullyQualifiedName!TU~"."~mname, NameAttribute, Policy, TA)(NameAttribute!DefaultPolicy(underscoreStrip(mname))).name;
 					static if (!isBuiltinTuple!(T, mname)) {
 						auto vtn = safeGetMember!mname(value);
 						static if (is(typeof(vtn) : Nullable!NVT, NVT)
-								&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, TypeTuple!(__traits(getMember, T, mname))[0])) {
+								&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0])) {
 							if (vtn.isNull) continue;
 							auto vt = vtn.get;
 						} else {
 							auto vt = vtn;
 						}
 					} else {
-						alias TTM = TypeTuple!(typeof(__traits(getMember, value, mname)));
+						alias TTM = AliasSeq!(typeof(__traits(getMember, value, mname)));
 						auto vt = tuple!TTM(__traits(getMember, value, mname));
 					}
 					alias STraits = SubTraits!(Traits, typeof(vt), TA);
@@ -676,13 +682,13 @@ private struct Traits(T, alias POL, ATTRIBUTES...)
 {
 	alias Type = T;
 	alias Policy = POL;
-	alias Attributes = TypeTuple!ATTRIBUTES;
+	alias Attributes = AliasSeq!ATTRIBUTES;
 }
 
 private struct SubTraits(Traits, T, A...)
 {
 	alias Type = Unqual!T;
-	alias Attributes = TypeTuple!A;
+	alias Attributes = AliasSeq!A;
 	alias Policy = Traits.Policy;
 	alias ContainerType = Traits.Type;
 	alias ContainerAttributes = Traits.Attributes;
@@ -879,10 +885,10 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 							foreach (i, FD; getExpandedFieldsData!(T, SerializableFields!(T, Policy))) {
 								enum mname = FD[0];
 								enum msindex = FD[1];
-								alias MT = TypeTuple!(__traits(getMember, T, mname));
+								alias MT = AliasSeq!(__traits(getMember, T, mname));
 								alias MTI = MT[msindex];
 								alias TMTI = typeof(MTI);
-								alias TMTIA = TypeTuple!(__traits(getAttributes, MTI));
+								alias TMTIA = AliasSeq!(__traits(getAttributes, MTI));
 								alias STraits = SubTraits!(Traits, TMTI, TMTIA);
 
 							case i:
@@ -913,12 +919,18 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 								}
 								break;
 							foreach (i, mname; SerializableFields!(T, Policy)) {
-								alias TM = TypeTuple!(typeof(__traits(getMember, T, mname)));
-								alias TA = TypeTuple!(__traits(getAttributes, TypeTuple!(__traits(getMember, T, mname))[0]));
+								alias TM = AliasSeq!(typeof(__traits(getMember, T, mname)));
+								static if (__traits(getOverloads, T, mname).length > 0) {
+									// combine attributes of overload sets
+									alias getAtts(alias ovl) = __traits(getAttributes, ovl);
+									alias TA = staticMap!(getAtts, __traits(getOverloads, T, mname));
+								} else {
+									alias TA = AliasSeq!(__traits(getAttributes, AliasSeq!(__traits(getMember, T, mname))[0]));
+								}
 								alias STraits = SubTraits!(Traits, TM, TA);
-								enum fname = getPolicyAttribute!(T, mname, NameAttribute, Policy)(NameAttribute!DefaultPolicy(underscoreStrip(mname))).name;
+								enum fname = getPolicyAttribute!(fullyQualifiedName!T~"."~mname, NameAttribute, Policy, TA)(NameAttribute!DefaultPolicy(underscoreStrip(mname))).name;
 								case fname:
-									static if (hasPolicyAttribute!(OptionalAttribute, Policy, TypeTuple!(__traits(getMember, T, mname))[0]))
+									static if (hasPolicyAttribute!(OptionalAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0]))
 										if (ser.tryReadNull!STraits()) return;
 									set[i] = true;
 									ser.beginReadDictionaryEntry!STraits(fname);
@@ -937,7 +949,7 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 				});
 			}
 			foreach (i, mname; SerializableFields!(T, Policy))
-				static if (!hasPolicyAttribute!(OptionalAttribute, Policy, TypeTuple!(__traits(getMember, T, mname))[0]))
+				static if (!hasPolicyAttribute!(OptionalAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0]))
 					enforce(set[i], "Missing non-optional field '"~mname~"' of type '"~T.stringof~"' ("~Policy.stringof~").");
 			return ret;
 		} else static if (isPointer!T) {
@@ -1378,13 +1390,34 @@ private template isSafeDeserializer(S)
 	else static assert(0, "Deserializer is missing required readValue method");
 }
 
-private template hasAttribute(T, alias decl) { enum hasAttribute = findFirstUDA!(T, decl).found; }
+private template hasAttribute(T, alias decl) {
+	// detect overload sets and satisfy if any overload has the attribute
+	static if (is(typeof(__traits(getMember, __traits(parent, decl), __traits(identifier, decl))))
+		&& __traits(getOverloads, __traits(parent, decl), __traits(identifier, decl)).length > 1)
+	{
+		enum match(alias ovl) = findFirstUDA!(T, ovl).found;
+		enum hasAttribute = anySatisfy!(match, __traits(getOverloads, __traits(parent, decl), __traits(identifier, decl)));
+	} else {
+		enum hasAttribute = findFirstUDA!(T, decl).found;
+	}
+}
 
 unittest {
 	@asArray int i1;
 	static assert(hasAttribute!(AsArrayAttribute!DefaultPolicy, i1));
 	int i2;
 	static assert(!hasAttribute!(AsArrayAttribute!DefaultPolicy, i2));
+
+	static struct S {
+		@asArray void foo(int) {}
+		void foo() {}
+
+		void bar(int) {}
+		@asArray void bar() {}
+	}
+
+	static assert(hasAttribute!(AsArrayAttribute!DefaultPolicy, S.foo));
+	static assert(hasAttribute!(AsArrayAttribute!DefaultPolicy, S.bar));
 }
 
 private template hasPolicyAttribute(alias T, alias POLICY, alias decl)
@@ -1451,14 +1484,22 @@ private static T getAttribute(TT, string mname, T)(T default_value)
 	else return default_value;
 }
 
-private static auto getPolicyAttribute(TT, string mname, alias Attribute, alias Policy)(Attribute!DefaultPolicy default_value)
+private static auto getPolicyAttribute(string field, alias Attribute, alias Policy, Attributes...)(Attribute!DefaultPolicy default_value)
 {
-	enum val = findFirstUDA!(Attribute!Policy, TypeTuple!(__traits(getMember, TT, mname))[0]);
-	static if (val.found) return val.value;
-	else {
-		enum val2 = findFirstUDA!(Attribute!DefaultPolicy, TypeTuple!(__traits(getMember, TT, mname))[0]);
-		static if (val2.found) return val2.value;
-		else return default_value;
+	enum match(alias A) = matchesUDAKind!(A, Attribute!Policy);
+	enum PA = Filter!(match, Attributes);
+	static if (PA.length) {
+		static foreach (i; 1 .. PA.length)
+			static assert(PA[i] == PA[0], "Mismatching " ~ Attribute!Policy.stringof ~ " attributes for serialized field " ~ field);
+		return PA[0];
+	} else {
+		enum matchDef(alias A) = matchesUDAKind(A, Attribute!DefaultPolicy);
+		enum PAD = Filter!(match, Attributes);
+		static if (PAD.length) {
+			static foreach (i; 1 .. PAD.length)
+				static assert(PAD[i] == PAD[0], "Mismatching " ~ Attribute!DefaultPolicy.stringof ~ " attributes for serialized field " ~ field);
+			return PAD[0];
+		} else return default_value;
 	}
 }
 
@@ -1488,30 +1529,36 @@ private template SerializableFields(COMPOSITE, alias POLICY)
 private template FilterSerializableFields(COMPOSITE, alias POLICY, FIELDS...)
 {
 	static if (FIELDS.length > 1) {
-		alias FilterSerializableFields = TypeTuple!(
+		alias FilterSerializableFields = AliasSeq!(
 			FilterSerializableFields!(COMPOSITE, POLICY, FIELDS[0 .. $/2]),
 			FilterSerializableFields!(COMPOSITE, POLICY, FIELDS[$/2 .. $]));
 	} else static if (FIELDS.length == 1) {
 		alias T = COMPOSITE;
 		enum mname = FIELDS[0];
 		static if (isRWPlainField!(T, mname) || isRWField!(T, mname)) {
-			alias Tup = TypeTuple!(__traits(getMember, COMPOSITE, FIELDS[0]));
+			alias Tup = AliasSeq!(__traits(getMember, COMPOSITE, FIELDS[0]));
 			static if (Tup.length != 1) {
-				alias FilterSerializableFields = TypeTuple!(mname);
+				alias FilterSerializableFields = AliasSeq!(mname);
+			} else static if (__traits(getOverloads, T, mname).length > 1) {
+				enum ignored(alias sym) = hasPolicyAttribute!(IgnoreAttribute, POLICY, sym);
+				static if (!anySatisfy!(ignored, __traits(getOverloads, T, mname)))
+					alias FilterSerializableFields = AliasSeq!(mname);
+				else
+					alias FilterSerializableFields = AliasSeq!();
 			} else {
 				static if (!hasPolicyAttribute!(IgnoreAttribute, POLICY, __traits(getMember, T, mname)))
-				{
-					alias FilterSerializableFields = TypeTuple!(mname);
-				} else alias FilterSerializableFields = TypeTuple!();
+					alias FilterSerializableFields = AliasSeq!(mname);
+				else
+					alias FilterSerializableFields = AliasSeq!();
 			}
-		} else alias FilterSerializableFields = TypeTuple!();
-	} else alias FilterSerializableFields = TypeTuple!();
+		} else alias FilterSerializableFields = AliasSeq!();
+	} else alias FilterSerializableFields = AliasSeq!();
 }
 
 private size_t getExpandedFieldCount(T, FIELDS...)()
 {
 	size_t ret = 0;
-	foreach (F; FIELDS) ret += TypeTuple!(__traits(getMember, T, F)).length;
+	foreach (F; FIELDS) ret += AliasSeq!(__traits(getMember, T, F)).length;
 	return ret;
 }
 
@@ -1520,7 +1567,7 @@ private template getExpandedFieldsData(T, FIELDS...)
 	import std.meta : aliasSeqOf, staticMap;
 	import std.range : repeat, zip, iota;
 
-	enum subfieldsCount(alias F) = TypeTuple!(__traits(getMember, T, F)).length;
+	enum subfieldsCount(alias F) = AliasSeq!(__traits(getMember, T, F)).length;
 	alias processSubfield(alias F) = aliasSeqOf!(zip(repeat(F), iota(subfieldsCount!F)));
 	alias getExpandedFieldsData = staticMap!(processSubfield, FIELDS);
 }
