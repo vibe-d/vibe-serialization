@@ -770,12 +770,12 @@ struct Json {
 			}
 		} else static if( is(T == Json[]) ){
 			switch( m_type ){
-				default: return Json([this]);
+				default: return [this];
 				case Type.array: return m_array;
 			}
 		} else static if( is(T == Json[string]) ){
 			switch( m_type ){
-				default: return Json(["value": this]);
+				default: return ["value": this];
 				case Type.object: return m_object;
 			}
 		} else static if( is(T == BigInt) ){
@@ -793,6 +793,13 @@ struct Json {
 		} else static if (is(T == JSONValue)) {
 			return cast(JSONValue)this;
 		} else static assert(0, "JSON can only be cast to (bool, long, std.bigint.BigInt, double, string, Json[] or Json[string]. Not "~T.stringof~".");
+	}
+
+	unittest {
+		assert(Json(42).to!string == "42");
+		assert(Json("42").to!int == 42);
+		assert(Json(42).to!(Json[]) == [Json(42)]);
+		assert(Json(42).to!(Json[string]) == ["value": Json(42)]);
 	}
 
 	/**
