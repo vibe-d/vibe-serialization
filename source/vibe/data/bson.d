@@ -211,31 +211,31 @@ struct Bson {
 		m_type = type;
 	}
 	/// ditto
-	this(in Bson[string] value) { opAssign(value); }
+	this(const Bson[string] value) { opAssign(value); }
 	/// ditto
-	this(in Bson[] value) { opAssign(value); }
+	this(const Bson[] value) { opAssign(value); }
 	/// ditto
-	this(in BsonBinData value) { opAssign(value); }
+	this(const BsonBinData value) { opAssign(value); }
 	/// ditto
-	this(in BsonObjectID value) { opAssign(value); }
+	this(const BsonObjectID value) { opAssign(value); }
 	/// ditto
 	this(bool value) { opAssign(value); }
 	/// ditto
-	this(in BsonDate value) { opAssign(value); }
+	this(const BsonDate value) { opAssign(value); }
 	/// ditto
 	this(typeof(null)) { opAssign(null); }
 	/// ditto
-	this(in BsonRegex value) { opAssign(value); }
+	this(const BsonRegex value) { opAssign(value); }
 	/// ditto
 	this(int value) { opAssign(value); }
 	/// ditto
-	this(in BsonTimestamp value) { opAssign(value); }
+	this(const BsonTimestamp value) { opAssign(value); }
 	/// ditto
 	this(long value) { opAssign(value); }
 	/// ditto
-	this(in Json value) { opAssign(value); }
+	this(const Json value) { opAssign(value); }
 	/// ditto
-	this(in UUID value) { opAssign(value); }
+	this(const UUID value) { opAssign(value); }
 
 	/**
 		Assigns a D type to a BSON value.
@@ -1031,7 +1031,7 @@ struct BsonObjectID {
 
 	/** Constructs a new object ID from the given raw byte array.
 	*/
-	this(in ubyte[] bytes)
+	this(scope const ubyte[] bytes)
 	{
 		assert(bytes.length == 12);
 		m_bytes[] = bytes[];
@@ -1077,7 +1077,7 @@ struct BsonObjectID {
 	 *   which guarantees that `BsonObjectID`s are chronologically
 	 *   sorted.
 	*/
-	static BsonObjectID generate(in SysTime time = Clock.currTime(UTC()))
+	static BsonObjectID generate(scope const SysTime time = Clock.currTime(UTC()))
 	{
 		import std.datetime;
 
@@ -1194,11 +1194,11 @@ struct BsonDate {
 		The time-zone independent Date and DateTime types are assumed to be in
 		the local time zone and converted to UTC if tz is left to null.
 	*/
-	this(in Date date, immutable TimeZone tz = null) { this(SysTime(date, tz)); }
+	this(const Date date, immutable TimeZone tz = null) { this(SysTime(date, tz)); }
 	/// ditto
-	this(in DateTime date, immutable TimeZone tz = null) { this(SysTime(date, tz)); }
+	this(const DateTime date, immutable TimeZone tz = null) { this(SysTime(date, tz)); }
 	/// ditto
-	this(in SysTime date) { this(fromStdTime(date.stdTime()).m_time); }
+	this(const SysTime date) { this(fromStdTime(date.stdTime()).m_time); }
 
 	/** Constructs a BsonDate from the given UNIX time.
 
