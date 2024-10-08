@@ -265,7 +265,7 @@ struct Json {
 	/// ditto
 	void opAssign(typeof(null)) nothrow @trusted { runDestructors(); m_type = Type.null_; m_string = null; }
 	/// ditto
-	bool opAssign(bool v) nothrow { runDestructors(); m_type = Type.bool_; m_bool = v; return v; }
+	bool opAssign(bool v) nothrow @trusted { runDestructors(); m_type = Type.bool_; m_bool = v; return v; }
 	/// ditto
 	int opAssign(int v) nothrow { runDestructors(); m_type = Type.int_; m_int = v; return v; }
 	/// ditto
@@ -1072,7 +1072,7 @@ struct Json {
 	/// ditto
 	bool opEquals(typeof(null)) const { return m_type == Type.null_; }
 	/// ditto
-	bool opEquals(bool v) const { return m_type == Type.bool_ && m_bool == v; }
+	bool opEquals(bool v) const @trusted { return m_type == Type.bool_ && m_bool == v; }
 	/// ditto
 	bool opEquals(int v) const @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
 	/// ditto
