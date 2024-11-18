@@ -408,6 +408,7 @@ struct Bson {
 			while( d.length > 0 ){
 				auto tp = cast(Type)d[0];
 				if( tp == Type.end ) break;
+				enforceValidType(tp);
 				d = d[1 .. $];
 				auto key = skipCString(d);
 				auto value = Bson(tp, d);
@@ -424,6 +425,7 @@ struct Bson {
 			while( d.length > 0 ){
 				auto tp = cast(Type)d[0];
 				if( tp == Type.end ) break;
+				enforceValidType(tp);
 				/*auto key = */skipCString(d); // should be '0', '1', ...
 				auto value = Bson(tp, d);
 				d = d[value.data.length .. $];
@@ -507,6 +509,7 @@ struct Bson {
 			while( d.length > 0 ){
 				auto tp = cast(Type)d[0];
 				if( tp == Type.end ) break;
+				enforceValidType(tp);
 				d = d[1 .. $];
 				auto key = skipCString(d);
 				auto value = Bson(tp, d);
@@ -523,6 +526,7 @@ struct Bson {
 			while( d.length > 0 ){
 				auto tp = cast(Type)d[0];
 				if( tp == Type.end ) break;
+				enforceValidType(tp);
 				/*auto key = */skipCString(d); // should be '0', '1', ...
 				auto value = Bson(tp, d);
 				d = d[value.data.length .. $];
@@ -740,6 +744,7 @@ struct Bson {
 		while( d.length > 0 ){
 			auto tp = cast(Type)d[0];
 			if( tp == Type.end ) break;
+			enforceValidType(tp);
 			d = d[1 .. $];
 			auto key = skipCString(d);
 			auto val = Bson(tp, d);
@@ -828,6 +833,7 @@ struct Bson {
 			size_t start_remainder = d.length;
 			auto tp = cast(Type)d[0];
 			if (tp == Type.end) break;
+			enforceValidType(tp);
 			d = d[1 .. $];
 			auto ekey = skipCString(d);
 			auto evalue = Bson(tp, d);
@@ -902,6 +908,7 @@ struct Bson {
 
 		static struct Rng {
 			private {
+				Bson.Type type;
 				immutable(ubyte)[] data;
 				string key;
 				Bson value;
@@ -916,13 +923,14 @@ struct Bson {
 				auto tp = cast(Type)data[0];
 				data = data[1 .. $];
 				if (tp == Type.end) return;
+				Bson.enforceValidType(tp, type);
 				key = skipCString(data);
 				value = Bson(tp, data);
 				data = data[value.data.length .. $];
 			}
 		}
 
-		auto ret = Rng(m_data[4 .. $]);
+		auto ret = Rng(m_type, m_data[4 .. $]);
 		ret.popFront();
 		return ret;
 	}
@@ -960,6 +968,25 @@ struct Bson {
 			if( m_type == t )
 				return;
 		throw new Exception("BSON value is type '"~m_type.enumToString~"', expected to be one of "~valid_types.map!(t => t.enumToString).join(", "));
+	}
+
+	private void enforceValidType(Type type)
+	const {
+		enforceValidType(type, m_type);
+	}
+
+	private static void enforceValidType(Type type, Type container_type)
+	{
+		import std.format : format;
+
+		switch (type) with (Type) {
+			case double_, string, object, array, binData, undefined, objectID,
+				bool_, date, null_, regex, dbRef, code, symbol, codeWScope,
+				int_, timestamp, long_:
+				return;
+			default:
+				throw new Exception(format("Encountered invalid field type for BSON %s: %d", container_type.enumToString, cast(int)type));
+		}
 	}
 }
 
