@@ -2617,7 +2617,24 @@ private void jsonEscape(bool escape_unicode = false, R)(ref R dst, const(char)[]
 /// private
 private string jsonUnescape(R)(ref R range)
 {
-	auto ret = appender!string();
+	// avoid memory allocations if there are no escape sequences present
+	static if (isSomeString!R) {
+		auto idx = range.representation.countUntil!(ch => ch == '\\' || ch == '\"');
+		if (idx < 0) return range.to!string;
+
+		auto str = range[0 .. idx].to!string;
+		range = range[idx .. $];
+
+		if (range[0] == '\"')
+			return str;
+
+		auto ret = appender!string;
+		ret.reserve(range.length);
+		ret.put(str);
+	} else {
+		auto ret = appender!string;
+	}
+
 	while(!range.empty){
 		auto ch = range.front;
 		switch( ch ){
