@@ -1477,13 +1477,6 @@ private template hasPolicyAttributeL(alias T, alias POLICY, ATTRIBUTES...)
 	enum hasPolicyAttributeL = hasAttributeL!(T!POLICY, ATTRIBUTES) || hasAttributeL!(T!DefaultPolicy, ATTRIBUTES);
 }
 
-private static T getAttribute(TT, string mname, T)(T default_value)
-{
-	enum val = findFirstUDA!(T, __traits(getMember, TT, mname));
-	static if (val.found) return val.value;
-	else return default_value;
-}
-
 private static auto getPolicyAttribute(string field, alias Attribute, alias Policy, Attributes...)(Attribute!DefaultPolicy default_value)
 {
 	enum match(alias A) = matchesUDAKind!(A, Attribute!Policy);
