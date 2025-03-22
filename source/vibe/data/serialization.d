@@ -374,7 +374,7 @@ private template serializeValueImpl(Serializer, alias Policy) {
 
 		alias TU = Unqual!T;
 
-		alias ATTRIBUTES = AliasSeq!(FIELD_ATTRIBUTES, __traits(getAttributes, T));
+		alias ATTRIBUTES = AliasSeq!(FIELD_ATTRIBUTES, TypeAttributes!T);
 
 		alias Traits = .Traits!(TU, _Policy, ATTRIBUTES);
 
@@ -719,7 +719,7 @@ private template deserializeValueImpl(Serializer, alias Policy) {
 	{
 		import std.typecons : BitFlags, Nullable, Typedef, TypedefType, Tuple;
 
-		alias ATTRIBUTES = AliasSeq!(FIELD_ATTRIBUTES, __traits(getAttributes, T));
+		alias ATTRIBUTES = AliasSeq!(FIELD_ATTRIBUTES, TypeAttributes!T);
 
 		alias Traits = .Traits!(T, _Policy, ATTRIBUTES);
 
@@ -1479,6 +1479,13 @@ unittest {
 private template hasPolicyAttributeL(alias T, alias POLICY, ATTRIBUTES...)
 {
 	enum hasPolicyAttributeL = hasAttributeL!(T!POLICY, ATTRIBUTES) || hasAttributeL!(T!DefaultPolicy, ATTRIBUTES);
+}
+
+private template TypeAttributes(T) {
+	static if (__traits(compiles, __traits(identifier, T)))
+		alias TypeAttributes = AliasSeq!(__traits(getAttributes, T));
+	else  // D < 2.101.0 raises an error when attempting to get attributes of built-in types.
+		alias TypeAttributes = AliasSeq!();
 }
 
 private static auto getPolicyAttribute(string field, alias Attribute, alias Policy, Attributes...)(Attribute!DefaultPolicy default_value)
