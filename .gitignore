@@ -1,7 +1,7 @@
 .dub
 .vs
 libvibe_core.a
-vibe-core-test-*
+vibe-serialization-test-*
 *.exe
 *.lst
 *.obj
