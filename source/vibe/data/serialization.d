@@ -543,7 +543,7 @@ private template serializeValueImpl(Serializer, alias Policy) {
 					foreach (mname; SerializableFields!(TU, Policy)) {
 						static if (!isBuiltinTuple!(T, mname)) {
 							auto vt = safeGetMember!mname(value);
-							static if (is(typeof(vt) : Nullable!NVT, NVT)
+							static if (is(typeof(vt) : Nullable!NVT, NVT...)
 									&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0])) {
 								if (vt.isNull) nfields--;
 							}
@@ -566,7 +566,7 @@ private template serializeValueImpl(Serializer, alias Policy) {
 					enum name = getPolicyAttribute!(fullyQualifiedName!TU~"."~mname, NameAttribute, Policy, TA)(NameAttribute!DefaultPolicy(underscoreStrip(mname))).name;
 					static if (!isBuiltinTuple!(T, mname)) {
 						auto vtn = safeGetMember!mname(value);
-						static if (is(typeof(vtn) : Nullable!NVT, NVT)
+						static if (is(typeof(vtn) : Nullable!NVT, NVT...)
 								&& hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, Policy, AliasSeq!(__traits(getMember, T, mname))[0])) {
 							if (vtn.isNull) continue;
 							auto vt = vtn.get;
@@ -1448,6 +1448,7 @@ unittest {
 	@asArray int i2;
 	int i3;
 	@embedNullable Nullable!int i4;
+	@embedNullable Nullable!(int, 0) i5;
 
 	static assert(hasPolicyAttribute!(AsArrayAttribute, CP, i1));
 	static assert(hasPolicyAttribute!(AsArrayAttribute, CP, i2));
@@ -1458,6 +1459,9 @@ unittest {
 	static assert(hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, DefaultPolicy, i4));
 	static assert(hasPolicyAttribute!(OptionalAttribute, DefaultPolicy, i4));
 	static assert(!hasPolicyAttribute!(IgnoreAttribute, DefaultPolicy, i4));
+	static assert(hasPolicyAttribute!(EmbedNullableIgnoreNullAttribute, DefaultPolicy, i5));
+	static assert(hasPolicyAttribute!(OptionalAttribute, DefaultPolicy, i5));
+	static assert(!hasPolicyAttribute!(IgnoreAttribute, DefaultPolicy, i5));
 }
 
 
@@ -1723,7 +1727,7 @@ unittest { // basic serialization behavior
 		static if (isPointer!T) {
 			if (value) assert(*deserialize!(TestSerializer, T)(expected) == *value);
 			else assert(deserialize!(TestSerializer, T)(expected) is null);
-		} else static if (is(T == Nullable!U, U)) {
+		} else static if (is(T == Nullable!U, U...)) {
 			if (value.isNull()) assert(deserialize!(TestSerializer, T)(expected).isNull);
 			else assert(deserialize!(TestSerializer, T)(expected) == value);
 		} else assert(deserialize!(TestSerializer, T)(expected) == value);
@@ -2247,14 +2251,15 @@ unittest { // issue #2110 - single-element tuples
 
 	struct S {
 		@embedNullable Nullable!int x;
+		@embedNullable Nullable!(int,0) x2;
 		@embedNullable Nullable!string s;
 	}
 
 	enum Sn = S.mangleof;
 
-	auto s = S(Nullable!int(3), Nullable!string.init);
-	auto expected = "D("~Sn~"){DE(i,x)(V(i)(3))DE(i,x)}D("~Sn~")";
+	S s = {x: 3};
 
+	auto expected = "D("~Sn~"){DE(i,x)(V(i)(3))DE(i,x)}D("~Sn~")";
 	assert(serialize!TestSerializer(s) == expected, serialize!TestSerializer(s));
 	assert(deserialize!(TestSerializer, S)(expected) == s);
 
@@ -2270,6 +2275,11 @@ unittest { // issue #2110 - single-element tuples
 
 	s.s.nullify();
 	expected = "D("~Sn~"){}D("~Sn~")";
+	assert(serialize!TestSerializer(s) == expected);
+	assert(deserialize!(TestSerializer, S)(expected) == s);
+	
+	s.x2 = 5;
+	expected = "D("~Sn~"){DE(i,x2)(V(i)(5))DE(i,x2)}D("~Sn~")";
 	assert(serialize!TestSerializer(s) == expected);
 	assert(deserialize!(TestSerializer, S)(expected) == s);
 }
