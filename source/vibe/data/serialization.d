@@ -2277,7 +2277,7 @@ unittest { // issue #2110 - single-element tuples
 	expected = "D("~Sn~"){}D("~Sn~")";
 	assert(serialize!TestSerializer(s) == expected);
 	assert(deserialize!(TestSerializer, S)(expected) == s);
-	
+
 	s.x2 = 5;
 	expected = "D("~Sn~"){DE(i,x2)(V(i)(5))DE(i,x2)}D("~Sn~")";
 	assert(serialize!TestSerializer(s) == expected);
