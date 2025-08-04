@@ -1428,7 +1428,7 @@ private template hasPolicyAttribute(alias T, alias POLICY, alias decl)
 {
 	// __traits(identifier) to hack around T being a template and not a type
 	// this if makes hasPolicyAttribute!(OptionalAttribute) == true when EmbedNullableIgnoreNullAttribute is present.
-	static if (__traits(identifier, T) == __traits(identifier, OptionalAttribute))
+	static if (__traits(isSame, OptionalAttribute, T))
 		enum hasPolicyAttribute = hasPolicyAttributeImpl!(T, POLICY, decl)
 			|| hasPolicyAttributeImpl!(EmbedNullableIgnoreNullAttribute, POLICY, decl);
 	else
