@@ -6,6 +6,9 @@ vibe-serialization-test-*
 *.lst
 *.obj
 *.sln
+*.a
+*.lib
+*.pdb
 dub.selections.json
 vibe_core.lib
 tests/tests
