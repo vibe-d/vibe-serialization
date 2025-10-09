@@ -1,5 +1,6 @@
 module vibe.data.internal.conv;
 
+import std.exception : assumeWontThrow;
 import std.traits : OriginalType;
 
 string enumToString(E)(E value)
@@ -24,7 +25,7 @@ void formattedWriteFixed(size_t MAX_BYTES, R, ARGS...)(ref R sink, string format
 	import vibe.container.internal.appender : FixedAppender;
 
 	FixedAppender!(char[], MAX_BYTES) app;
-	app.formattedWrite(format, args);
+	app.formattedWrite(format, args).assumeWontThrow;
 	sink.put(app.data);
 }
 
