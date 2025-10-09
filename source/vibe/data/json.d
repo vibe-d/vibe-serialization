@@ -2394,7 +2394,11 @@ void writeJsonString(R, bool pretty = false)(ref R dst, in Json json, size_t lev
 			//       will still allocate. On the other hand, there is no sink
 			//       based overload that is nothrow so using toString() would
 			//       mean that this function cannot be nothrow, regardless of R
-			dst.put(json.get!BigInt.assumeWontThrow.toDecimalString);
+			static if (__VERSION__ < 2091) {
+				() @trusted { dst.put(json.get!BigInt.assumeWontThrow.toDecimalString); } ();
+			} else {
+				dst.put(json.get!BigInt.assumeWontThrow.toDecimalString);
+			}
 			break;
 		case Json.Type.float_:
 			auto d = json.get!double.assumeWontThrow;
