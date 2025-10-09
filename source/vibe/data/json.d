@@ -1053,7 +1053,7 @@ struct Json {
 	*/
 
 	bool opEquals(ref const Json other)
-	const @trusted {
+	const nothrow @trusted {
 		if( m_type != other.m_type ) return false;
 		final switch(m_type){
 			case Type.undefined: return false;
@@ -1068,21 +1068,21 @@ struct Json {
 		}
 	}
 	/// ditto
-	bool opEquals(const Json other) const { return opEquals(other); }
+	bool opEquals(const Json other) const nothrow { return opEquals(other); }
 	/// ditto
-	bool opEquals(typeof(null)) const { return m_type == Type.null_; }
+	bool opEquals(typeof(null)) const nothrow { return m_type == Type.null_; }
 	/// ditto
-	bool opEquals(bool v) const @trusted { return m_type == Type.bool_ && m_bool == v; }
+	bool opEquals(bool v) const nothrow @trusted { return m_type == Type.bool_ && m_bool == v; }
 	/// ditto
-	bool opEquals(int v) const @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
+	bool opEquals(int v) const nothrow @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
 	/// ditto
-	bool opEquals(long v) const @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
+	bool opEquals(long v) const nothrow @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
 	/// ditto
-	bool opEquals(BigInt v) const @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
+	bool opEquals(BigInt v) const nothrow @trusted { return (m_type == Type.int_ && m_int == v) || (m_type == Type.bigInt && m_bigInt == v); }
 	/// ditto
-	bool opEquals(double v) const { return m_type == Type.float_ && m_float == v; }
+	bool opEquals(double v) const nothrow { return m_type == Type.float_ && m_float == v; }
 	/// ditto
-	bool opEquals(string v) const @trusted { return m_type == Type.string && m_string == v; }
+	bool opEquals(string v) const nothrow @trusted { return m_type == Type.string && m_string == v; }
 
 	/**
 		Compares two JSON values.
@@ -1140,7 +1140,7 @@ struct Json {
 		See_Also: writeJsonString, toPrettyString
 	*/
 	string toString()
-	const @trusted {
+	const nothrow @trusted {
 		// DMD BUG: this should actually be all @safe, but for some reason
 		// @safe inference for writeJsonString doesn't work.
 		auto ret = appender!string();
@@ -1223,7 +1223,7 @@ struct Json {
 		See_Also: writePrettyJsonString, toString
 	*/
 	string toPrettyString(int level = 0)
-	const @trusted {
+	const nothrow @trusted {
 		auto ret = appender!string();
 		writePrettyJsonString(ret, this, level);
 		return ret.data;
@@ -1293,6 +1293,19 @@ struct Json {
 	auto j = Json(true);
 	j.toString((scope str) @safe {}, FormatSpec!char("s"));
 	assert(j.toString() == "true");
+}
+
+@safe nothrow unittest { // ensure the basic APIs are @safe nothrow
+	auto json = Json(["foo": Json(12), "bar": Json([Json("a"), Json(true)])]);
+	assert(json == json);
+	assert(json.toString() == `{"foo":12,"bar":["a",true]}`);
+	assert(json.toPrettyString() == `{
+	"foo": 12,
+	"bar": [
+		"a",
+		true
+	]
+}`);
 }
 
 
@@ -2373,33 +2386,34 @@ void writeJsonString(R, bool pretty = false)(ref R dst, in Json json, size_t lev
 	final switch( json.type ){
 		case Json.Type.undefined: dst.put("null"); break;
 		case Json.Type.null_: dst.put("null"); break;
-		case Json.Type.bool_: dst.put(json.get!bool ? "true" : "false"); break;
-		case Json.Type.int_: formattedWriteFixed!32(dst, "%d", json.get!long); break;
+		case Json.Type.bool_: dst.put(json.get!bool.assumeWontThrow ? "true" : "false"); break;
+		case Json.Type.int_: formattedWriteFixed!32(dst, "%d", json.get!long.assumeWontThrow); break;
 		case Json.Type.bigInt:
-			() @trusted {
-				static if (__VERSION__ < 2093)
-					json.get!BigInt.toString((scope s) { dst.put(s); }, "%d");
-				else json.get!BigInt.toString(dst, "%d");
-			} ();
+			// NOTE: Using toDecimalString(), because BigInt will allocate a
+			//       buffer internally anyway, so using a sink based toString()
+			//       will still allocate. On the other hand, there is no sink
+			//       based overload that is nothrow so using toString() would
+			//       mean that this function cannot be nothrow, regardless of R
+			dst.put(json.get!BigInt.assumeWontThrow.toDecimalString);
 			break;
 		case Json.Type.float_:
-			auto d = json.get!double;
+			auto d = json.get!double.assumeWontThrow;
 			if (d != d)
 				dst.put("null"); // JSON has no NaN value so set null
 			else
-				formattedWriteFixed!32(dst, "%.16g", json.get!double);
+				formattedWriteFixed!32(dst, "%.16g", d);
 			break;
 		case Json.Type.string:
 			dst.put('\"');
-			jsonEscape(dst, json.get!string);
+			jsonEscape(dst, json.get!string.assumeWontThrow);
 			dst.put('\"');
 			break;
 		case Json.Type.array:
 			dst.put('[');
-			bool first = true;
-			foreach (ref const Json e; json.byValue) {
-				if( !first ) dst.put(",");
-				first = false;
+			bool empty = true;
+			foreach (ref const Json e; json.get!(Json[]).assumeWontThrow) {
+				if (!empty) dst.put(",");
+				empty = false;
 				static if (pretty) {
 					dst.put('\n');
 					foreach (tab; 0 .. level+1) dst.put('\t');
@@ -2408,7 +2422,7 @@ void writeJsonString(R, bool pretty = false)(ref R dst, in Json json, size_t lev
 				else writeJsonString!(R, pretty)(dst, e, level+1);
 			}
 			static if (pretty) {
-				if (json.length > 0) {
+				if (!empty) {
 					dst.put('\n');
 					foreach (tab; 0 .. level) dst.put('\t');
 				}
@@ -2417,22 +2431,22 @@ void writeJsonString(R, bool pretty = false)(ref R dst, in Json json, size_t lev
 			break;
 		case Json.Type.object:
 			dst.put('{');
-			bool first = true;
-			foreach (string k, ref const Json e; json.byKeyValue) {
-				if( e.type == Json.Type.undefined ) continue;
-				if( !first ) dst.put(',');
-				first = false;
+			bool empty = true;
+			foreach (el; json.get!(Json[string]).assumeWontThrow.byKeyValue) {
+				if (el.value.type == Json.Type.undefined) continue;
+				if (!empty) dst.put(',');
+				empty = false;
 				static if (pretty) {
 					dst.put('\n');
 					foreach (tab; 0 .. level+1) dst.put('\t');
 				}
 				dst.put('\"');
-				jsonEscape(dst, k);
+				jsonEscape(dst, el.key);
 				dst.put(pretty ? `": ` : `":`);
-				writeJsonString!(R, pretty)(dst, e, level+1);
+				writeJsonString!(R, pretty)(dst, el.value, level+1);
 			}
 			static if (pretty) {
-				if (json.length > 0) {
+				if (!empty) {
 					dst.put('\n');
 					foreach (tab; 0 .. level) dst.put('\t');
 				}
@@ -2442,7 +2456,7 @@ void writeJsonString(R, bool pretty = false)(ref R dst, in Json json, size_t lev
 	}
 }
 
-unittest {
+@safe unittest {
 	auto a = Json.emptyObject;
 	a["a"] = Json.emptyArray;
 	a["b"] = Json.emptyArray;
@@ -2510,6 +2524,8 @@ unittest {
 	deserializeJson(d, Json(null)); // Json.undefined should deserialize to nan
 	assert(d != d);
 }
+
+
 /**
 	Writes the given JSON object as a prettified JSON string into the destination range.
 
