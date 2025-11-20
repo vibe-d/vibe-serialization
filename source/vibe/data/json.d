@@ -1149,15 +1149,12 @@ struct Json {
 	}
 	/// ditto
 	void toString(scope void delegate(scope const(char)[]) @safe sink, FormatSpec!char fmt)
-	@trusted {
-		// DMD BUG: this should actually be all @safe, but for some reason
-		// @safe inference for writeJsonString doesn't work.
-		static struct DummyRangeS {
-			void delegate(scope const(char)[]) @safe sink;
+	@safe {
+		struct DummyRangeS {
 			void put(scope const(char)[] str) @safe { sink(str); }
 			void put(char ch) @trusted { sink((&ch)[0 .. 1]); }
 		}
-		auto r = DummyRangeS(sink);
+		auto r = DummyRangeS();
 		writeJsonString(r, this);
 	}
 	/// ditto
@@ -1177,15 +1174,12 @@ struct Json {
 	/// ditto
 	deprecated("Use a `scope` argument for the `sink` delegate")
 	void toString(scope void delegate(const(char)[]) @safe sink, FormatSpec!char fmt)
-	@trusted {
-		// DMD BUG: this should actually be all @safe, but for some reason
-		// @safe inference for writeJsonString doesn't work.
-		static struct DummyRangeS {
-			void delegate(const(char)[]) @safe sink;
-			void put(scope const(char)[] str) @safe { sink(str); }
+	@safe {
+		struct DummyRangeS {
+			void put(scope const(char)[] str) @safe { sink(str.idup); }
 			void put(char ch) @trusted { sink((&ch)[0 .. 1]); }
 		}
-		auto r = DummyRangeS(sink);
+		auto r = DummyRangeS();
 		writeJsonString(r, this);
 	}
 	/// ditto
