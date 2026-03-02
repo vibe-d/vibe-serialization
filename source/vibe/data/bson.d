@@ -465,7 +465,7 @@ struct Bson {
 		else static if( is(T == UUID) ){
 			checkType(Type.binData);
 			auto bbd = this.get!BsonBinData();
-			enforce(bbd.type == BsonBinData.Type.uuid, "BsonBinData value is type '"~bbd.type.enumToString~"', expected to be uuid");
+			enforce(bbd.type == BsonBinData.Type.uuid || bbd.type == BsonBinData.Type.uuidOld, "BsonBinData value is type '"~bbd.type.enumToString~"', expected to be uuid");
 			const ubyte[16] b = bbd.rawData;
 			return UUID(b);
 		}
@@ -573,7 +573,7 @@ struct Bson {
 		else static if( is(T == UUID) ){
 			checkType(Type.binData);
 			auto bbd = this.get!BsonBinData();
-			enforce(bbd.type == BsonBinData.Type.uuid, "BsonBinData value is type '"~bbd.type.enumToString~"', expected to be uuid");
+			enforce(bbd.type == BsonBinData.Type.uuid || bbd.type == BsonBinData.Type.uuidOld, "BsonBinData value is type '"~bbd.type.enumToString~"', expected to be uuid");
 			const ubyte[16] b = bbd.rawData;
 			return UUID(b);
 		}
@@ -1001,7 +1001,8 @@ struct BsonBinData {
 		generic = 0x00,
 		function_ = 0x01,
 		binaryOld = 0x02,
-		uuid = 0x03,
+		uuidOld = 0x03,
+		uuid = 0x04,
 		md5 = 0x05,
 		userDefined = 0x80,
 
