@@ -1251,7 +1251,7 @@ struct Json {
 	private void initBigInt()
 	nothrow @trusted {
 		// BigInt is a struct, and it has a special BigInt.init value, which differs from null.
-		m_bigInt = BigInt.init;
+		emplace(&m_bigInt);
 	}
 
 	private void runDestructors()
