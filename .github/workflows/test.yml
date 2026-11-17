@@ -39,5 +39,6 @@ jobs:
               env:
                 DC: ${{matrix.dc}}
                 ARCH: ${{matrix.arch}}
+                OS: ${{matrix.os}}
               shell: bash
               run: ./run-ci.sh
