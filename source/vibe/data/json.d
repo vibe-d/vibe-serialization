@@ -1084,6 +1084,12 @@ struct Json {
 	/// ditto
 	bool opEquals(string v) const nothrow @trusted { return m_type == Type.string && m_string == v; }
 
+	unittest {
+		auto a = parseJsonString(`{"kind":"or","terms":[{"kind":"and","terms":[{"kind":"rating","max":{"value":0,"inclusive":true},"min":{"value":0,"inclusive":true}}]}]}`);
+		auto b = parseJsonString(`{"terms":[{"terms":[{"min":{"value":0,"inclusive":true},"kind":"rating","max":{"inclusive":true,"value":0}}],"kind":"and"}],"kind":"or"}`);
+		assert(a == b);
+	}
+
 	/**
 		Compares two JSON values.
 
@@ -1614,6 +1620,16 @@ string serializeToPrettyJson(T)(auto ref T value)
 }`);
 }
 
+@safe unittest {
+	string json = serializeToPrettyJson(["foo": Json(["bar": Json(1)])]);
+	assert(json ==
+`{
+	"foo": {
+		"bar": 1
+	}
+}`);
+}
+
 
 /**
 	Deserializes a JSON value into the destination variable.
@@ -2058,8 +2074,8 @@ struct JsonStringSerializer(R, bool pretty = false)
 				m_range.put('"');
 			} else static if (isSomeString!T) writeValue!Traits(value.to!string); // TODO: avoid memory allocation
 			else static if (is(UT == UUID)) writeValue!Traits(value.toString());
-			else static if (is(UT == Json)) m_range.writeJsonString(value);
-			else static if (is(UT == JSONValue)) m_range.writeJsonString(Json(value));
+			else static if (is(UT == Json)) m_range.writeJsonString!(R, pretty)(value, m_level);
+			else static if (is(UT == JSONValue)) m_range.writeJsonString!(R, pretty)(Json(value), m_level);
 			else static if (isJsonSerializable!UT) {
 				static if (!__traits(compiles, () @safe { return value.toJson(); } ()))
 					pragma(msg, "Non-@safe toJson/fromJson methods are deprecated - annotate "~UT.stringof~".toJson() with @safe.");
